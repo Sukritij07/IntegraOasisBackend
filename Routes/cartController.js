@@ -1,38 +1,59 @@
-const CartItem = require("../Models/CartItem");
+const Cart = require("../Models/CartItem");
 const User = require("../Models/Users");
 
 exports.addItemToCart = async (req, res) => {
-  const { productId, price, quantity, userId } = req.body;
+  const { userId, productId, price, quantity } = req.body;
 
   try {
-    const cartItem = new CartItem({
-      productId,
-      price,
-      quantity,
-      userId,
-    });
+    let cart = await Cart.findOne({ userId });
+    if (!cart) {
+      cart = new Cart({ userId, items: [] });
+    }
 
-    await cartItem.save();
+    const itemIndex = cart.items.findIndex(item => item.productId === productId);
+    if (itemIndex > -1) {
+      cart.items[itemIndex].quantity += quantity;
+    } else {
+      cart.items.push({ productId, price, quantity });
+    }
 
-    await Users.findByIdAndUpdate(userId, {
-      $push: { cart: cartItem._id },
-    });
-
-    res.json({ msg: "Item added to cart" });
+    await cart.save();
+    res.status(200).json(cart);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: "Server Error" });
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
   }
 };
 
-exports.getCartItems = async (req, res) => {
+exports.removeItemFromCart = async (req, res) => {
+  const { userId, productId } = req.body;
+
+  try {
+    const cart = await Cart.findOne({ userId });
+    if (!cart) {
+      return res.status(400).json({ msg: 'Cart not found' });
+    }
+
+    cart.items = cart.items.filter(item => item.productId !== productId);
+    await cart.save();
+    res.status(200).json(cart);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+};
+
+exports.getCart = async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const cartItems = await CartItem.find({ userId });
-    res.json(cartItems);
+    const cart = await Cart.findOne({ userId });
+    if (!cart) {
+      return res.status(400).json({ msg: 'Cart not found' });
+    }
+    res.status(200).json(cart);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: "Server Error" });
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
   }
 };

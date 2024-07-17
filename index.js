@@ -16,7 +16,7 @@ mongoose.connect("mongodb://localhost:27017/Integra-Oasis", {
 });
 
 app.use("/api/user", authRoutes);
-app.use("/api/cart", cartRoutes);
+app.use("/api", cartRoutes);
 
 // Test route
 app.get("/", (req, res) => {
